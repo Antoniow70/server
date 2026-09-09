@@ -16,6 +16,9 @@ export const config = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY,
   nodeEnv: process.env.NODE_ENV || 'development',
   emailUser: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : undefined,
-  emailPass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : undefined
+  emailPass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : undefined,
+  resendApiKey: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : undefined,
+  smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
+  smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 465,
+  smtpSecure: process.env.SMTP_SECURE !== 'false'
 };
-
