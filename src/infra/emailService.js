@@ -53,9 +53,10 @@ async function getTransporter() {
 /**
  * Envia um e-mail de forma assíncrona.
  * Suporta:
- * 1. Resend API (HTTP/HTTPS porta 443 - recomendado para Render Free onde portas SMTP são bloqueadas)
- * 2. Nodemailer SMTP (com IPv4 forçado)
- * 3. Simulação (se nenhuma credencial estiver configurada)
+ * 1. Brevo API (HTTPS porta 443 - 300 emails/dia grátis para qualquer destinatário no mundo)
+ * 2. Resend API (HTTPS porta 443 - 3.000 emails/mês grátis)
+ * 3. Nodemailer SMTP (com IPv4 forçado)
+ * 4. Simulação (se nenhuma credencial estiver configurada)
  * 
  * @param {object} options
  * @param {string} options.to - E-mail do destinatário
@@ -64,7 +65,39 @@ async function getTransporter() {
  * @returns {Promise<object>} Detalhes do envio
  */
 export async function sendEmail({ to, subject, html }) {
-  // 1. Envio via Resend API (HTTPS porta 443 - 100% livre de bloqueio em nuvem)
+  // 1. Envio via Brevo API (HTTPS porta 443 - 100% liberado no Render)
+  if (config.brevoApiKey) {
+    try {
+      const fromEmail = config.emailUser || 'antoniofelixnhanombe@gmail.com';
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': config.brevoApiKey,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'ALEM', email: fromEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`✅ [EmailService] E-mail enviado com sucesso para ${to} via Brevo API. ID: ${data.messageId}`);
+      return { success: true, messageId: data.messageId };
+    } catch (brevoError) {
+      console.error(`❌ [EmailService] Erro ao enviar via Brevo API para ${to}:`, brevoError.message);
+      return { success: false, error: brevoError.message };
+    }
+  }
+
+  // 2. Envio via Resend API (HTTPS porta 443 - 100% liberado no Render)
   if (config.resendApiKey) {
     try {
       const fromEmail = config.emailUser && config.emailUser.includes('@')
@@ -98,7 +131,7 @@ export async function sendEmail({ to, subject, html }) {
     }
   }
 
-  // 2. Envio via SMTP (Nodemailer com IPv4 garantido)
+  // 3. Envio via SMTP (Nodemailer com IPv4 garantido)
   const mailTransporter = await getTransporter();
 
   if (!mailTransporter) {
@@ -121,7 +154,7 @@ export async function sendEmail({ to, subject, html }) {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || error.code === 'ENETUNREACH') {
-      console.warn(`⚠️ [EmailService] O Render Free bloqueia portas SMTP de saída (465/587). Para envio 100% garantido e gratuito, adicione RESEND_API_KEY no painel do Render.`);
+      console.warn(`⚠️ [EmailService] O Render Free bloqueia portas SMTP de saída (465/587). Adicione BREVO_API_KEY ou RESEND_API_KEY no painel do Render para envio via HTTPS.`);
     }
     console.error(`❌ [EmailService] Erro ao enviar e-mail para ${to}:`, error.message || error);
     return { success: false, error: error.message || error };
