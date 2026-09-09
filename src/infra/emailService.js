@@ -1,23 +1,14 @@
 import nodemailer from 'nodemailer';
-import dns from 'dns';
+import dns from 'dns/promises';
 import { config } from '../config/env.js';
-
-// No Node 17+, força resolução IPv4 primeiro para evitar ENETUNREACH em plataformas sem suporte IPv6 (ex: Render)
-if (dns.setDefaultResultOrder) {
-  try {
-    dns.setDefaultResultOrder('ipv4first');
-  } catch (e) {
-    // Silencioso se o ambiente não permitir
-  }
-}
 
 let transporter = null;
 
 /**
  * Obtém ou inicializa o transportador SMTP do Nodemailer.
- * Retorna null se as credenciais do e-mail não estiverem configuradas.
+ * Força resolução direta para endereço IPv4 para evitar ENETUNREACH em ambientes cloud como o Render.
  */
-function getTransporter() {
+async function getTransporter() {
   if (transporter) return transporter;
 
   const user = config.emailUser;
@@ -27,11 +18,26 @@ function getTransporter() {
     return null;
   }
 
+  let hostToUse = config.smtpHost;
+  // Se for o Gmail, resolve para IPv4 diretamente evitando qualquer tentativa via IPv6
+  if (config.smtpHost === 'smtp.gmail.com') {
+    try {
+      const ipv4List = await dns.resolve4('smtp.gmail.com');
+      if (ipv4List && ipv4List.length > 0) {
+        hostToUse = ipv4List[0];
+      }
+    } catch (e) {
+      // Mantém hostname se a resolução falhar
+    }
+  }
+
   transporter = nodemailer.createTransport({
-    host: config.smtpHost,
+    host: hostToUse,
     port: config.smtpPort,
     secure: config.smtpSecure,
-    family: 4, // Força estritamente IPv4
+    tls: {
+      servername: config.smtpHost
+    },
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 10000,
@@ -88,12 +94,12 @@ export async function sendEmail({ to, subject, html }) {
       return { success: true, messageId: data.id };
     } catch (resendError) {
       console.error(`❌ [EmailService] Erro ao enviar via Resend API para ${to}:`, resendError.message);
-      throw resendError;
+      return { success: false, error: resendError.message };
     }
   }
 
-  // 2. Envio via SMTP (Nodemailer)
-  const mailTransporter = getTransporter();
+  // 2. Envio via SMTP (Nodemailer com IPv4 garantido)
+  const mailTransporter = await getTransporter();
 
   if (!mailTransporter) {
     console.log('────────────────────────────────────────────────────────────');
@@ -114,11 +120,10 @@ export async function sendEmail({ to, subject, html }) {
     console.log(`✅ [EmailService] E-mail enviado com sucesso para ${to} via SMTP. ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    // Alerta específico para o bloqueio de portas SMTP do Render Free
     if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || error.code === 'ENETUNREACH') {
-      console.warn(`⚠️ [EmailService] O Render Free bloqueia conexões SMTP diretas (portas 465/587). Para envio real em produção sem custos, adicione a variável RESEND_API_KEY no painel do Render.`);
+      console.warn(`⚠️ [EmailService] O Render Free bloqueia portas SMTP de saída (465/587). Para envio 100% garantido e gratuito, adicione RESEND_API_KEY no painel do Render.`);
     }
     console.error(`❌ [EmailService] Erro ao enviar e-mail para ${to}:`, error.message || error);
-    throw error;
+    return { success: false, error: error.message || error };
   }
 }
