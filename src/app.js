@@ -23,6 +23,7 @@ const app = express();
 // ─── Global Middlewares ──────────────────────────────────
 const allowedOrigins = [
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []),
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : []),
   'https://alem-eight.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -41,6 +42,11 @@ app.use(cors({
     
     // Check standard allowed list
     if (allowedOrigins.indexOf(normalizedOrigin) !== -1) {
+      return callback(null, true);
+    }
+
+    // Allow any Vercel deployment (preview or production domains)
+    if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(normalizedOrigin)) {
       return callback(null, true);
     }
 
