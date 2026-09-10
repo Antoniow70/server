@@ -78,7 +78,7 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
         reportName = 'Relatório de Doadores/Doações ALEM';
       }
       doc.fillColor(slate900).font('Helvetica-Bold').fontSize(18).text(reportName, 36, 36);
-      doc.fillColor(slate500).font('Helvetica').fontSize(9).text('Associação de Luta e Esperança de Moçambique', 36, 56);
+      doc.fillColor(slate500).font('Helvetica').fontSize(9).text('Associação Laços Especiais de Moçambique', 36, 56);
       
       doc.fillColor(slate700).font('Helvetica-Bold').fontSize(11).text(title, 36, 75);
       
@@ -95,7 +95,7 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
       for (let i = 0; i < pageCount; i++) {
         doc.switchToPage(i);
         doc.fillColor(slate500).font('Helvetica').fontSize(7.5);
-        doc.text('ALEM — Associação de Luta e Esperança de Moçambique  |  Documento Interno Administrativo', 36, doc.page.height - 30);
+        doc.text('ALEM — Associação Laços Especiais de Moçambique  |  Documento Interno Administrativo', 36, doc.page.height - 30);
         doc.text(`Página ${i + 1} de ${pageCount}`, doc.page.width - 100, doc.page.height - 30, { width: 64, align: 'right' });
       }
     };
@@ -158,11 +158,9 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
       let currentY = 120;
       
       if (type === 'donations') {
-        const totalDonAmount = donations.reduce((sum, d) => sum + (parseFloat(d.valor) || 0), 0);
         doc.strokeColor(slate200).lineWidth(1).rect(36, 115, 230, 45).stroke();
-        doc.fillColor(slate500).font('Helvetica').fontSize(7.5).text('VALOR TOTAL ANGARIADO NO PERÍODO', 46, 123);
-        doc.fillColor(slate900).font('Helvetica-Bold').fontSize(11).text(`MT ${totalDonAmount.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`, 46, 135);
-        doc.fillColor(slate500).font('Helvetica').fontSize(7.5).text(`${donations.length} doações declaradas`, 175, 137);
+        doc.fillColor(slate500).font('Helvetica').fontSize(7.5).text('TOTAL DE DOAÇÕES NO PERÍODO', 46, 123);
+        doc.fillColor(slate900).font('Helvetica-Bold').fontSize(11).text(String(donations.length), 46, 135);
         currentY = 175;
       }
 
@@ -170,11 +168,10 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
       doc.text('#', 36, currentY, { width: 20 });
       doc.text('Doador', 60, currentY, { width: 140 });
       doc.text('Contacto', 205, currentY, { width: 130 });
-      doc.text('Causa / Projeto', 340, currentY, { width: 120 });
-      doc.text('Método', 465, currentY, { width: 65 });
-      doc.text('Data & Hora', 535, currentY, { width: 85 });
-      doc.text('Valor', 625, currentY, { width: 75, align: 'right' });
-      doc.text('Mensagem', 710, currentY, { width: 95, align: 'center' });
+      doc.text('Causa / Projeto', 340, currentY, { width: 140 });
+      doc.text('Método', 485, currentY, { width: 85 });
+      doc.text('Data & Hora', 575, currentY, { width: 110 });
+      doc.text('Mensagem', 690, currentY, { width: 115, align: 'center' });
 
       doc.strokeColor(slate700).lineWidth(0.5).moveTo(36, currentY + 12).lineTo(doc.page.width - 36, currentY + 12).stroke();
       currentY += 18;
@@ -193,10 +190,9 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
             doc.text('Doador', 60, currentY);
             doc.text('Contacto', 205, currentY);
             doc.text('Causa / Projeto', 340, currentY);
-            doc.text('Método', 465, currentY);
-            doc.text('Data & Hora', 535, currentY);
-            doc.text('Valor', 625, currentY, { align: 'right' });
-            doc.text('Mensagem', 710, currentY, { align: 'center' });
+            doc.text('Método', 485, currentY);
+            doc.text('Data & Hora', 575, currentY);
+            doc.text('Mensagem', 690, currentY, { align: 'center' });
             doc.strokeColor(slate700).lineWidth(0.5).moveTo(36, currentY + 12).lineTo(doc.page.width - 36, currentY + 12).stroke();
             currentY += 18;
             doc.font('Helvetica').fontSize(7.5).fillColor(slate700);
@@ -206,13 +202,10 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
           doc.text(String(donations.length - index), 36, currentY);
           doc.text(d.nome || 'Doador Anónimo', 60, currentY, { width: 140 });
           doc.text(`${d.telefone || ''}\n${d.email || ''}`, 205, currentY, { width: 130 });
-          doc.text(d.causa || 'Geral', 340, currentY, { width: 120 });
-          doc.text(d.metodo_pagamento || '—', 465, currentY, { width: 65 });
-          doc.text(dateStr, 535, currentY, { width: 85 });
-          
-          const valorNum = parseFloat(d.valor || 0);
-          doc.text(`MT ${valorNum.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`, 625, currentY, { width: 75, align: 'right' });
-          doc.text('', 710, currentY, { width: 95, align: 'center' });
+          doc.text(d.causa || 'Geral', 340, currentY, { width: 140 });
+          doc.text(d.metodo_pagamento || '—', 485, currentY, { width: 85 });
+          doc.text(dateStr, 575, currentY, { width: 110 });
+          doc.text('', 690, currentY, { width: 115, align: 'center' });
 
           doc.strokeColor(slate200).lineWidth(0.2).moveTo(36, currentY + 18).lineTo(doc.page.width - 36, currentY + 18).stroke();
           currentY += 22;

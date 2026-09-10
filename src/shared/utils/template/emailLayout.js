@@ -56,7 +56,7 @@ export function getEmailLayout(contentHtml, previewText = 'Associacao ALEM') {
           <tr>
             <td align="center" style="background-color: #1B314C; padding: 32px 24px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: 2px;">ALEM</h1>
-              <p style="margin: 4px 0 0 0; color: #789ACA; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Associacao de Luta e Esperanca de Mocambique</p>
+              <p style="margin: 4px 0 0 0; color: #789ACA; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Associacao Lacos Especiais de Mocambique</p>
             </td>
           </tr>
 
