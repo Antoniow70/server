@@ -1,6 +1,29 @@
 import { supabaseAdmin } from '../../infra/supabaseAdmin.js';
 import { sendEmail } from '../../infra/emailService.js';
-import { getSupportEmailHtml } from '../../shared/utils/template/supportEmailTemplate.js';
+import { getSupportEmailHtml, getSupportStatusUpdateEmailHtml } from '../../shared/utils/template/supportEmailTemplate.js';
+
+async function notifySupportStatusChange(messageRecord, status) {
+  if (!messageRecord || !messageRecord.email) return;
+
+  const relevantStatuses = ['Aceito', 'Aprovado', 'Em Analise'];
+  if (!relevantStatuses.includes(status)) return;
+
+  try {
+    const html = getSupportStatusUpdateEmailHtml(messageRecord, status);
+    const subjectTitle = (status === 'Aceito' || status === 'Aprovado')
+      ? 'O seu pedido de apoio foi Aceito! - ALEM 🎉'
+      : 'O seu pedido de apoio está em Análise - ALEM';
+
+    await sendEmail({
+      to: messageRecord.email,
+      subject: subjectTitle,
+      html
+    });
+    console.log(`✅ [Suporte] E-mail de status (${status}) enviado com sucesso para ${messageRecord.email}`);
+  } catch (err) {
+    console.error(`❌ [Suporte] Falha ao enviar e-mail de status para ${messageRecord.email}:`, err.message);
+  }
+}
 
 export async function getMessages(filters = {}) {
   let query = supabaseAdmin.from('messages').select('*', { count: 'exact' });
@@ -57,10 +80,20 @@ export async function updateMessageStatus(id, status) {
   if (error) {
     if (error.code === '23514') {
       const { data: msg } = await supabaseAdmin.from('messages').select('*').eq('id', id).single();
-      return msg ? { ...msg, status } : { id, status };
+      const fallbackRecord = msg ? { ...msg, status } : { id, status };
+      notifySupportStatusChange(fallbackRecord, status).catch(e => console.error(e));
+      return fallbackRecord;
     }
     throw error;
   }
+
+  // Notificar beneficiário por e-mail quando o status muda para Aceito / Aprovado / Em Analise
+  if (data) {
+    notifySupportStatusChange(data, status).catch(err => {
+      console.error('⚠️ [Suporte] Erro ao disparar e-mail de atualização de apoio:', err);
+    });
+  }
+
   return data;
 }
 
@@ -90,10 +123,21 @@ export async function bulkUpdateMessageStatus(ids, newStatus) {
   if (error) {
     if (error.code === '23514') {
       const { data: msgs } = await supabaseAdmin.from('messages').select('*').in('id', ids);
-      return (msgs || []).map(m => ({ ...m, status: newStatus }));
+      const fallbackList = (msgs || []).map(m => ({ ...m, status: newStatus }));
+      fallbackList.forEach(m => notifySupportStatusChange(m, newStatus).catch(e => console.error(e)));
+      return fallbackList;
     }
     throw error;
   }
+
+  if (Array.isArray(data)) {
+    data.forEach(m => {
+      notifySupportStatusChange(m, newStatus).catch(err => {
+        console.error('⚠️ [Suporte] Erro ao disparar e-mail em lote:', err);
+      });
+    });
+  }
+
   return data;
 }
 
