@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import ws from 'ws';
 import { config } from '../config/env.js';
 
 const supabaseUrl = config.supabaseUrl;
@@ -19,8 +18,5 @@ export const supabaseAdmin = createClient(urlToUse, keyToUse, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
-  },
-  realtime: {
-    transport: ws
   }
 });
