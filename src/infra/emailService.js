@@ -65,7 +65,32 @@ async function getTransporter() {
  * @returns {Promise<object>} Detalhes do envio
  */
 export async function sendEmail({ to, subject, html }) {
-  // 1. Envio via Brevo API (HTTPS porta 443 - 100% liberado no Render)
+  // 1. Envio via Vercel Serverless Relay (HTTPS porta 443 liberada no Render, Nodemailer SMTP na Vercel)
+  const vercelUrl = process.env.VERCEL_API_URL || process.env.CLIENT_URL || 'https://client-theta-one-74.vercel.app';
+  if (vercelUrl && !vercelUrl.includes('localhost')) {
+    try {
+      const cleanUrl = vercelUrl.trim().replace(/\/+$/, '');
+      const response = await fetch(`${cleanUrl}/api/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ to, subject, html })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log(`✅ [EmailService] E-mail enviado com sucesso para ${to} via Vercel Relay. ID: ${data.messageId || 'OK'}`);
+          return { success: true, messageId: data.messageId };
+        }
+      }
+    } catch (relayErr) {
+      console.warn(`⚠️ [EmailService] Vercel Relay indisponível (${relayErr.message}), tentando provedores alternativos...`);
+    }
+  }
+
+  // 2. Envio via Brevo API (HTTPS porta 443 - 100% liberado no Render)
   if (config.brevoApiKey) {
     try {
       const fromEmail = config.emailUser || 'antoniofelixnhanombe@gmail.com';
