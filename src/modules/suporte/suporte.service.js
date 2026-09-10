@@ -98,13 +98,13 @@ export async function bulkUpdateMessageStatus(ids, newStatus) {
 }
 
 export async function submitMessage(payload) {
-  const { endereco, subject, message, ...dbPayload } = payload;
-
+  // Passamos o payload completo. Se precisar omitir algo que não vai no banco,
+  // fazemos de forma que campos obrigatórios (subject, message) sejam inseridos.
   const { data, error } = await supabaseAdmin
     .from('messages')
     .insert([{
-      ...dbPayload,
-      status: 'Novo',
+      ...payload,
+      status: 'Pendente',
       read_status: 'Nao Lido'
     }])
     .select()
