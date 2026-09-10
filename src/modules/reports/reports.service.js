@@ -106,9 +106,9 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
     if (type === 'consolidated') {
       drawHeader('Resumo Geral da Organização');
       
-      const totalDonAmount = donations.reduce((sum, d) => sum + (parseFloat(d.valor) || 0), 0);
       const approvedVolunteers = volunteers.filter(v => v.status === 'Aprovado').length;
       const acceptedRequests = messages.filter(m => m.status === 'Aceito' || m.status === 'Aceitado' || m.status === 'Aprovado').length;
+      const confirmedDonations = donations.filter(d => d.status === 'Recebido' || d.status === 'Confirmado').length;
 
       doc.font('Helvetica-Bold').fontSize(10).fillColor(slate900).text('SUMÁRIO EXECUTIVO', 36, 125);
 
@@ -119,9 +119,9 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
 
       // Card 1: Doações
       doc.strokeColor(slate200).lineWidth(1).rect(36, cardY, cardWidth, cardHeight).stroke();
-      doc.fillColor(slate500).font('Helvetica').fontSize(8).text('VALOR TOTAL ANGARIADO', 46, cardY + 12);
-      doc.fillColor(slate900).font('Helvetica-Bold').fontSize(14).text(`MT ${totalDonAmount.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`, 46, cardY + 27);
-      doc.fillColor(slate500).font('Helvetica').fontSize(8).text(`${donations.length} doações declaradas`, 46, cardY + 47);
+      doc.fillColor(slate500).font('Helvetica').fontSize(8).text('TOTAL DE DOAÇÕES REGISTADAS', 46, cardY + 12);
+      doc.fillColor(slate900).font('Helvetica-Bold').fontSize(14).text(String(donations.length), 46, cardY + 27);
+      doc.fillColor(slate500).font('Helvetica').fontSize(8).text(`${confirmedDonations} doações confirmadas/recebidas`, 46, cardY + 47);
 
       // Card 2: Voluntários
       doc.strokeColor(slate200).lineWidth(1).rect(36 + cardWidth + gap, cardY, cardWidth, cardHeight).stroke();
@@ -138,7 +138,7 @@ export async function generateReportPDF(startDate, endDate, type = 'consolidated
       doc.fillColor(slate900).font('Helvetica-Bold').fontSize(10).text('NOTAS E DIRETRIZES DO RELATÓRIO', 36, 235);
       doc.fillColor(slate700).font('Helvetica').fontSize(8.5).text(
         '1. Este documento reúne todas as atividades declaradas no sistema de apoio ALEM durante o período indicado.\n' +
-        '2. Os dados de doações referem-se a intenções submetidas por doadores no site institucional. A validação do recebimento financeiro é offline e efetuada manualmente pelos administradores.\n' +
+        '2. Os dados de doações referem-se a registos e contactos submetidos por apoiantes no site institucional.\n' +
         '3. Os pedidos de apoio e voluntariado recusados foram eliminados definitivamente do banco de dados para proteção de privacidade de dados, em conformidade com as regras de integridade do sistema ALEM.\n' +
         '4. Qualquer inconsistência nos dados deve ser reportada ao responsável técnico de base de dados da ALEM.',
         36, 255, { lineGap: 5 }
