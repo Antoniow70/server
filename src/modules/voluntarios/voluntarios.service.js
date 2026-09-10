@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '../../infra/supabaseAdmin.js';
 import { sendEmail } from '../../infra/emailService.js';
-import { getVolunteerEmailHtml } from '../../shared/utils/template/volunteerEmailTemplate.js';
+import { getVolunteerEmailHtml, getVolunteerApprovedEmailHtml } from '../../shared/utils/template/volunteerEmailTemplate.js';
 
 export async function getVolunteers(filters = {}) {
   let query = supabaseAdmin.from('volunteers').select('*', { count: 'exact' });
@@ -74,6 +74,42 @@ export async function deleteVolunteer(id) {
   return true;
 }
 
+async function notifyVolunteerApproved(volunteer) {
+  if (!volunteer || !volunteer.email) return;
+
+  let activityName = 'Atividade Geral da ALEM';
+  if (volunteer.activity_id) {
+    try {
+      const { data: activityData } = await supabaseAdmin
+        .from('activities')
+        .select('name')
+        .eq('id', volunteer.activity_id)
+        .single();
+      if (activityData?.name) {
+        activityName = activityData.name;
+      }
+    } catch (e) {
+      // Mantém fallback
+    }
+  }
+
+  try {
+    const html = getVolunteerApprovedEmailHtml({
+      ...volunteer,
+      activityName
+    });
+
+    await sendEmail({
+      to: volunteer.email,
+      subject: 'Parabéns! A sua candidatura a voluntário na ALEM foi aprovada! 🎉',
+      html
+    });
+    console.log(`✅ [Voluntarios] E-mail de aprovação enviado com sucesso para ${volunteer.email}`);
+  } catch (err) {
+    console.error(`❌ [Voluntarios] Falha ao enviar e-mail de aprovação para ${volunteer.email}:`, err.message);
+  }
+}
+
 export async function updateVolunteerStatus(id, status) {
   if (status === 'Pendente') {
     const { data: current } = await supabaseAdmin
@@ -97,6 +133,14 @@ export async function updateVolunteerStatus(id, status) {
     .select()
     .single();
   if (error) throw error;
+
+  // Envia e-mail de comemoração quando aprovado
+  if (status === 'Aprovado' && data) {
+    notifyVolunteerApproved(data).catch(err => {
+      console.error('⚠️ [Voluntarios] Erro assíncrono ao enviar e-mail de aprovação:', err);
+    });
+  }
+
   return data;
 }
 
@@ -123,6 +167,16 @@ export async function bulkUpdateVolunteerStatus(ids, newStatus) {
     .in('id', ids)
     .select();
   if (error) throw error;
+
+  // Se o lote for de aprovação, envia para cada voluntário aprovado
+  if (newStatus === 'Aprovado' && Array.isArray(data)) {
+    data.forEach(v => {
+      notifyVolunteerApproved(v).catch(err => {
+        console.error('⚠️ [Voluntarios] Erro ao enviar e-mail de aprovação em lote:', err);
+      });
+    });
+  }
+
   return data;
 }
 
